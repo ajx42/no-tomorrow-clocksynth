@@ -13,6 +13,7 @@ set(NO_TMRW_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/src")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/argparse/include")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/utils")
 
 add_subdirectory(src "${NO_TMRW_BINARY_DIR}")
 

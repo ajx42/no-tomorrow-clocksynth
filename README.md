@@ -1,2 +1,11 @@
-# no-tomorrow-placer
-the amazing FPGA placer that works like there is no tomorrow!
+# no-tomorrow-clocksynth
+Home to our Clock Network Synthesis work.
+
+## Build Instructions
+```
+mkdir build
+cd build
+cmake ../ -DCMAKE_INSTALL_PREFIX=.
+cmake --build . --parallel 16
+cmake --install .
+```

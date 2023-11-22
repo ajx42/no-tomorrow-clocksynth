@@ -1,4 +1,4 @@
-#include <argparse/argparse.hpp>
+#include "parser.hpp"
 
 int main(int argc, char *argv[]) {
   if(argc!=3) {

@@ -267,7 +267,7 @@ inline TopologyResult TreeSynthesis::getTopology() {
 
     // Insert newly created nodes of this pass into the `actv` set.
     std::for_each(newNodes.begin(), newNodes.end(),
-                  [&](auto &&n) { actv.insert(std::move(n)); });
+                  [&](auto &&n) { actv.insert(n); });
 
     // Generate node pairs for the newly created nodes and add to the
     // priority queue.

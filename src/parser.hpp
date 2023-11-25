@@ -1,3 +1,4 @@
+#pragma once
 
 #include <fstream>
 #include <iostream>
@@ -16,8 +17,8 @@
 #define READ_BLOCKAGE 8
 
 struct point {
-  long int x;
-  long int y;
+  int64_t x;
+  int64_t y;
 };
 
 struct voltage {
@@ -29,8 +30,8 @@ struct simulation {
   struct point lower_left;
   struct point upper_right;
   struct voltage vdd;
-  long int slew_limit;
-  long int cap_limit;
+  int64_t slew_limit;
+  int64_t cap_limit;
 };
 
 struct source {
@@ -40,23 +41,23 @@ struct source {
 };
 
 struct sink {
-  int id;
+  std::string id;
   struct point cord;
-  long int cap;
+  int64_t cap;
 };
 
 struct wire {
-  int type;
+  std::string type;
   float cap;
   float resistance;
 };
 
 struct buffer { // Probably not needed ?
-  int id;
+  std::string id;
   std::string cktname;
   int inverted;
-  long int in_cap;
-  long int out_cap;
+  int64_t in_cap;
+  int64_t out_cap;
   float resistance;
 };
 
@@ -217,7 +218,7 @@ inline void print_output(std::string filename, struct outparams t) {
 
   file << "num buffer " << t.buffers.size() << "\n";
 
-  for (size_t k = 0; k < t.wires.size(); k++) {
+  for (size_t k = 0; k < t.buffers.size(); k++) {
     file << t.buffers[k].from << " " << t.buffers[k].to << " "
          << t.buffers[k].type << "\n";
   }

@@ -114,8 +114,9 @@ def parse_input(filename):
         ret.blockages.append((llx, lly, urx, ury))
     return ret
 
-def plot_input(filename, outfilename):
+def plot_input(filename, outfilename, title):
     fig, ax = plt.subplots()
+    plt.title(title)
     data = parse_input(filename)
     llx, lly, urx, ury = data.limits
     tot_len = max(urx-llx, ury-lly)
@@ -132,8 +133,9 @@ def plot_input(filename, outfilename):
         ax.add_patch(Rectangle((llx, lly), urx-llx, ury-lly, color="cyan"))
     plt.savefig(outfilename)
 
-def plot_output(filename, infilename, outfilename):
+def plot_output(filename, infilename, outfilename, title):
     fig, ax = plt.subplots()
+    plt.title(title)
     indata = parse_input(infilename)
     outdata = parse_output(filename)
     
@@ -201,12 +203,17 @@ def main():
     parser.add_argument("--infile", help="ISPD input file")
     parser.add_argument("--outfile", help="ISPD output file (only if mode is `output`)")
     parser.add_argument("--output", help="print plot to this file")
+    parser.add_argument("--title", help="title for the plot")
     args = parser.parse_args()
 
+    title = args.title
+
     if args.mode == 'input':
-        plot_input(args.infile, args.output)
+        title = title if title else "INPUT"
+        plot_input(args.infile, args.output, title)
     else:
-        plot_output(args.outfile, args.infile, args.output)
+        title = title if title else "OUTPUT"
+        plot_output(args.outfile, args.infile, args.output, title)
 
 if __name__ == '__main__':
     main()

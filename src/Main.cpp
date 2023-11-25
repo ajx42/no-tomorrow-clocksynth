@@ -1,5 +1,6 @@
 #include <argparse/argparse.hpp>
 #include "parser.hpp"
+#include "topology.hpp"
 
 int main( int argc, char** argv ) {
   argparse::ArgumentParser program( "main" );
@@ -24,8 +25,26 @@ int main( int argc, char** argv ) {
 
   auto inp = parse( inputFile );
 
-  outparams test;
-  print_output(outputFile, test);
+  auto syn = clksyn::TreeSynthesis(
+    inp,
+    clksyn::TreeSynthesisSettings {
+      .Algo = clksyn::TopologyAlgorithm::NNA,
+      .Alpha = 0, .Beta = 0, .Gamma = 0, .Delta = 0.5
+    }
+  );
 
+  /*
+  auto syn = clksyn::TreeSynthesis(
+    inp,
+    clksyn::TreeSynthesisSettings {
+      .Algo = clksyn::TopologyAlgorithm::DNNA,
+      .Alpha = 0.2, .Beta = 1.0, .Gamma = 0.5, .Delta = 2.5
+    }
+  );
+  */
+
+  auto top = syn.getTopology().toOutParam();
+
+  print_output(outputFile, top);
   return 0;
 }

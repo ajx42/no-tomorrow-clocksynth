@@ -1,8 +1,8 @@
 #pragma once
 
 #include "WowLogger.H"
-#include "parser.hpp"
 #include "blockage.hpp"
+#include "parser.hpp"
 
 #include <iterator>
 #include <map>
@@ -166,9 +166,9 @@ inline double TreeSynthesis::pairCost(TreeNode a, TreeNode b) {
   case TopologyAlgorithm::DNNA: {
     auto nodeDistance = abs(a.x - b.x) + abs(a.y - b.y);
     double blockageOverlap = (double)bMgr_.getOverlapPerimeter(
-      std::min(a.x, b.x), std::min(a.y, b.y),
-      std::max(a.x, b.x), std::max(a.y, b.y)
-    ) / (2 * nodeDistance);
+                                 std::min(a.x, b.x), std::min(a.y, b.y),
+                                 std::max(a.x, b.x), std::max(a.y, b.y)) /
+                             (2 * nodeDistance);
     double loadDistance = abs(a.LdCap - b.LdCap) / std::max(a.LdCap, b.LdCap);
     double totalLoad = 0; // @TODO
 

@@ -2,6 +2,7 @@
 
 #include "WowLogger.H"
 #include "parser.hpp"
+#include "blockage.hpp"
 
 #include <iterator>
 #include <map>

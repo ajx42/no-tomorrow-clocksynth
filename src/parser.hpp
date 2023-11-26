@@ -21,6 +21,10 @@ struct point {
   int64_t y;
 };
 
+struct Blockage {
+  int64_t x1, y1, x2, y2;
+};
+
 struct voltage {
   float vdd_param1;
   float vdd_param2;
@@ -65,6 +69,7 @@ struct inparams {
   std::vector<sink> sinks;
   std::vector<wire> wires;
   std::vector<buffer> buffers;
+  std::vector<Blockage> blockages;
   simulation smul;
   source src;
 };
@@ -184,6 +189,18 @@ inline inparams parse(std::string filename) {
           std::string t1, t2;
           s >> t1 >> t2 >> output_pkt.smul.cap_limit;
           mode = READ_BLOCKAGE;
+        } else if (mode == READ_BLOCKAGE) {
+          if (iter == 0) {
+            std::string t1, t2;
+            int num_blockages = 0;
+            s >> t1 >> t2 >> num_blockages;
+            iter = num_blockages;
+          } else {
+            Blockage curr;
+            s >> curr.x1 >> curr.y1 >> curr.x2 >> curr.y2;
+            iter--;
+            output_pkt.blockages.push_back(curr);
+          }          
         }
       }
     }

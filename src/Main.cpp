@@ -1,6 +1,7 @@
 #include <argparse/argparse.hpp>
 #include "parser.hpp"
 #include "topology.hpp"
+#include "blockage.hpp"
 
 int main( int argc, char** argv ) {
   argparse::ArgumentParser program( "main" );
@@ -46,5 +47,24 @@ int main( int argc, char** argv ) {
   auto top = syn.getTopology().toOutParam();
 
   print_output(outputFile, top);
+  auto alpha = clksyn::BlockageManager();  
+
+  while ( true ) {
+    int64_t x1, y1, x2, y2;
+    std::cin >> x1 >> x2 >> y1 >> y2;
+    if ( x1 == -1 && x2 == -1 ) break;
+    alpha.insertBlockage(x1, y1, x2, y2);
+  }
+
+  std::cout << "overlap" << std::endl;
+
+  while ( true ) {
+    int64_t x1, y1, x2, y2;
+    std::cin >> x1 >> x2 >> y1 >> y2;
+    if ( x1 == -1 && x2 == -1 ) break;
+    std::cout << alpha.getOverlapPerimeter(x1, y1, x2, y2) << std::endl;
+    
+  }
+
   return 0;
 }

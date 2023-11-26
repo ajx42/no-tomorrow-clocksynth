@@ -47,6 +47,8 @@ int main( int argc, char** argv ) {
   auto top = syn.getTopology().toOutParam();
 
   print_output(outputFile, top);
+
+  /*
   auto alpha = clksyn::BlockageManager();  
 
   while ( true ) {
@@ -63,8 +65,7 @@ int main( int argc, char** argv ) {
     std::cin >> x1 >> x2 >> y1 >> y2;
     if ( x1 == -1 && x2 == -1 ) break;
     std::cout << alpha.getOverlapPerimeter(x1, y1, x2, y2) << std::endl;
-    
   }
-
+  */
   return 0;
 }

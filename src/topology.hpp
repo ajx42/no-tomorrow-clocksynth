@@ -1,8 +1,8 @@
 #pragma once
 
 #include "WowLogger.H"
-#include "parser.hpp"
 #include "blockage.hpp"
+#include "parser.hpp"
 
 #include <iterator>
 #include <map>
@@ -121,11 +121,10 @@ private:
 
   inparams inp_;
   TreeSynthesisSettings sett_;
-
   std::map<int32_t, std::string> idxToTag_;
-
   std::vector<TreeNode> sinks_;
   TreeNode source_;
+  BlockageManager bMgr_;
 };
 
 TreeSynthesis::TreeSynthesis(inparams inp, TreeSynthesisSettings sett)
@@ -149,6 +148,10 @@ TreeSynthesis::TreeSynthesis(inparams inp, TreeSynthesisSettings sett)
       .LdCap = 0,
   };
   idxToTag_[0] = inp_.src.source_name;
+
+  std::for_each(inp_.blockages.begin(), inp_.blockages.end(), [&](auto &&bkg) {
+    bMgr_.insertBlockage(bkg.x1, bkg.y1, bkg.x2, bkg.y2);
+  });
 }
 
 // Determines cost of merging two nodes. This is based on the
@@ -162,9 +165,13 @@ inline double TreeSynthesis::pairCost(TreeNode a, TreeNode b) {
   }
   case TopologyAlgorithm::DNNA: {
     auto nodeDistance = abs(a.x - b.x) + abs(a.y - b.y);
-    double blockageOverlap = 0; // @TODO
+    double blockageOverlap = (double)bMgr_.getOverlapPerimeter(
+                                 std::min(a.x, b.x), std::min(a.y, b.y),
+                                 std::max(a.x, b.x), std::max(a.y, b.y)) /
+                             (2 * nodeDistance);
     double loadDistance = abs(a.LdCap - b.LdCap) / std::max(a.LdCap, b.LdCap);
     double totalLoad = 0; // @TODO
+
     ret = double(nodeDistance) * (1 + blockageOverlap / sett_.Alpha) *
           (1 + loadDistance / sett_.Beta) * (1 + totalLoad / sett_.Gamma);
   }

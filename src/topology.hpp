@@ -1,6 +1,7 @@
 #pragma once
 
-#include "WowLogger.H"
+#include <utils/WowLogger.H>
+
 #include "blockage.hpp"
 #include "parser.hpp"
 

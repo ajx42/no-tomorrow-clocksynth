@@ -10,11 +10,13 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 
 set(NO_TMRW_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/src")
 
+set(NO_TMRW_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/argparse/include")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/utils")
 
 add_subdirectory(src "${NO_TMRW_BINARY_DIR}")
+add_subdirectory(tests "${NO_TMRW_TEST_DIR}")
 
 

@@ -109,9 +109,20 @@ struct DMECore {
   }
 };
 
-// inline int64_t coreDistance( DMECore lhs, DMECore rhs ) {
-//
-// }
+inline int64_t coreDistance( DMECore lhs, DMECore rhs ) {
+  if ( lhs.Kind == DMECore::POINT && rhs.Kind == DMECore::POINT ) {
+    return manhattanDistance( std::get<pt_t>( lhs.Loc ), std::get<pt_t>( rhs.Loc ) );
+  }
+  else if ( lhs.Kind == DMECore::POINT && rhs.Kind == DMECore::SEGMENT ) {
+    return manhattanDistance( std::get<pt_t>( lhs.Loc ), std::get<seg_t>( rhs.Loc ) );
+  }
+  else if ( lhs.Kind == DMECore::SEGMENT && rhs.Kind == DMECore::POINT ) {
+    return manhattanDistance( std::get<pt_t>( rhs.Loc ), std::get<seg_t>( lhs.Loc ) );
+  }
+  else {
+    return manhattanDistance( std::get<seg_t>( lhs.Loc ), std::get<seg_t>( rhs.Loc ) );
+  }
+}
 
 struct DMETiledRegion {
   DMETiledRegion(DMECore core, int64_t dist);

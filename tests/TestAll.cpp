@@ -33,6 +33,13 @@ TEST_CASE( "DME::DMENode TRR Tests", "[dme]" ) {
   REQUIRE( trr.Right == dme::pt_t {.x = 30, .y = 50} );
 }
 
+TEST_CASE( "DME::manhattanDistance Test", "[dme]" ) {
+  auto seg1 = dme::seg_t {{.x = 0, .y = 0}, {.x = 5, .y = 5}};
+  auto seg2 = dme::seg_t {{.x = 2, .y = 3}, {.x = 8, .y = 3}};
+  auto res = dme::manhattanDistance( seg1, seg2 );
+  REQUIRE( res == 1 );
+}
+
 TEST_CASE( "DME::DMETiledRegion Intersection Test", "[dme]" ) {
   auto core1 = dme::DMECore {
     .Kind = dme::DMECore::SEGMENT,

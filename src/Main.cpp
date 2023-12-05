@@ -2,6 +2,7 @@
 #include "parser.hpp"
 #include "topology.hpp"
 #include "blockage.hpp"
+#include "dme.hpp"
 
 int main( int argc, char** argv ) {
   argparse::ArgumentParser program( "main" );
@@ -25,7 +26,7 @@ int main( int argc, char** argv ) {
   auto outputFile = program.get<std::string>( "--output" );
 
   auto inp = parse( inputFile );
-
+  /*
   auto syn = clksyn::TreeSynthesis(
     inp,
     clksyn::TreeSynthesisSettings {
@@ -33,8 +34,8 @@ int main( int argc, char** argv ) {
       .Alpha = 0, .Beta = 0, .Gamma = 0, .Delta = 0.5
     }
   );
-
-  /*
+  */
+  
   auto syn = clksyn::TreeSynthesis(
     inp,
     clksyn::TreeSynthesisSettings {
@@ -42,11 +43,13 @@ int main( int argc, char** argv ) {
       .Alpha = 0.2, .Beta = 1.0, .Gamma = 0.5, .Delta = 2.5
     }
   );
-  */
+  
+  auto top = syn.getTopology();
+  auto em = dme::EmbeddingManager( inp, top );
+  auto emres = em.computeEmbedding();
 
-  auto top = syn.getTopology().toOutParam();
-
-  print_output(outputFile, top);
+  print_output(outputFile, top.toOutParam());
+  print_output(outputFile + ".embedding", emres.toOutParam() );
 
   /*
   auto alpha = clksyn::BlockageManager();  

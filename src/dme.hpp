@@ -341,7 +341,6 @@ private:
   inparams inp_;
   wire wire_;
   clksyn::TopologyResult topology_;
-  EmbeddingResult latestRes_;
   std::vector<std::vector<int32_t>> adj_;
   std::vector<clksyn::TreeNode> topoNodes_;
   std::vector<DMENode> nodes_;
@@ -445,7 +444,7 @@ inline EmbeddingResult EmbeddingManager::computeEmbedding() {
   for (size_t i = 1; i < nodes_.size(); ++i) {
     std::cout << nodes_[i].str() << std::endl;
   }
-  return latestRes_;
+  return topology_;
 }
 
 } // namespace dme

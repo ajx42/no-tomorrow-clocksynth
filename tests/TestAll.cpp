@@ -41,6 +41,15 @@ TEST_CASE("DME::manhattanDistance Test", "[dme]") {
   REQUIRE(res == 1);
 }
 
+TEST_CASE("DME::closestOnSegment Test", "[dme]") {
+  auto seg = dme::seg_t{{.x = 0, .y = 0}, {.x = 5, .y = 5}};
+  auto pt = dme::pt_t{.x = 1, .y = 2};
+  auto expPt = dme::pt_t{.x = 1, .y = 1};
+  auto res = dme::closestOnSegment(pt, seg);
+  REQUIRE(res == expPt);
+}
+
+
 TEST_CASE("DME::DMETiledRegion Intersection Test", "[dme]") {
   auto core1 =
       dme::DMECore{.Kind = dme::DMECore::SEGMENT,

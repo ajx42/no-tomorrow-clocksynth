@@ -40,22 +40,26 @@ using pt_t = ManhattanPt;
 
 struct ManhattanSeg : std::pair<ManhattanPt, ManhattanPt> {
   ManhattanSeg(ManhattanPt a, ManhattanPt b)
-      : std::pair<ManhattanPt, ManhattanPt>(a, b) {}
+      : std::pair<ManhattanPt, ManhattanPt>(a, b) {
+    if (second.x < first.x)
+      std::swap(first, second);
+  }
 
-  int64_t getSlope() const {
+  double getSlope() const {
     auto dx = second.x - first.x;
     auto dy = second.y - first.y;
     if (dx == 0) {
       return std::numeric_limits<int64_t>::max();
     }
-    return dy / dx;
+    return (double)dy / dx;
   }
 
   bool isActuallyPoint() const { return first == second; }
 
   std::string str() const {
     std::ostringstream oss;
-    oss << "Segment:[" << first.str() << ", " << second.str() << "]";
+    oss << "Segment:(Slope=" << getSlope() << "):[" << first.str() << ", "
+        << second.str() << "]";
     return oss.str();
   }
 };
@@ -74,10 +78,10 @@ inline int64_t manhattanDistance(pt_t a, seg_t b) {
   }
   auto slopePt = pt_t{.x = 1, .y = dy / dx};
 
-  // brute forcing for now
+  // @FIXME: brute forcing for now
   // really bored of this and moving on
   auto ans = std::numeric_limits<int64_t>::max();
-  for (pt_t x = b.first; x != b.second; x = x + slopePt) {
+  for (pt_t x = b.first; x <= b.second; x = x + slopePt) {
     ans = std::min(ans, manhattanDistance(a, x));
   }
 
@@ -91,6 +95,26 @@ inline int64_t manhattanDistance(seg_t a, seg_t b) {
   ans = std::min(ans, manhattanDistance(b.first, a));
   ans = std::min(ans, manhattanDistance(b.second, a));
   return ans;
+}
+
+// @FIXME: brute forcing here as well
+inline pt_t closestOnSegment(pt_t src, seg_t target) {
+  auto slope = target.getSlope();
+  if (slope != 1 && slope != -1) {
+    LogError("closestOnSegment function is only available for Manhattan Arcs");
+    return target.first;
+  }
+  auto slopePt = pt_t{.x = 1, .y = static_cast<int64_t>(slope)};
+  auto mnDist = std::numeric_limits<int64_t>::max();
+  pt_t retAns;
+  for (pt_t x = target.first; x <= target.second; x = x + slopePt) {
+    auto dist = manhattanDistance(src, x);
+    if (dist < mnDist) {
+      mnDist = dist;
+      retAns = x;
+    }
+  }
+  return retAns;
 }
 
 struct DMECore {
@@ -266,6 +290,7 @@ inline std::string DMENode::str() const {
 
 inline DMENode merge(const DMENode &lhs, const DMENode &rhs, wire wr) {
   auto d = coreDistance(lhs.Core, rhs.Core);
+  LogInfo("Merging: " + lhs.str() + " " + rhs.str());
   if (d == 0) {
     LogError("Intersecting cores. This won't end well!");
   }
@@ -275,7 +300,7 @@ inline DMENode merge(const DMENode &lhs, const DMENode &rhs, wire wr) {
   double eaDbl =
       (double)((del2 - del1) + (double)(d * d * wr.resistance * wr.cap) / 2 +
                d * wr.resistance * c2) /
-      (wr.resistance * (c1 + c2 + d));
+      (wr.resistance * ((double)c1 + c2 + d * wr.cap));
 
   eaDbl = std::max(eaDbl, 0.);
   eaDbl = std::min(eaDbl, (double)d);
@@ -301,19 +326,21 @@ inline DMENode merge(const DMENode &lhs, const DMENode &rhs, wire wr) {
                  .LdCap = lhs.LdCap + rhs.LdCap + d * wr.cap};
 }
 
-struct EmbeddingResult {};
+using EmbeddingResult = clksyn::TopologyResult;
 
 struct EmbeddingManager {
   EmbeddingManager(inparams, clksyn::TopologyResult);
 
-  void computeEmbedding();
+  EmbeddingResult computeEmbedding();
 
 private:
   void dfs(int32_t nodeIdx, int32_t parentIdx);
+  void finalise(int32_t nodeIdx, int32_t parentIdx);
 
   inparams inp_;
   wire wire_;
   clksyn::TopologyResult topology_;
+  EmbeddingResult latestRes_;
   std::vector<std::vector<int32_t>> adj_;
   std::vector<clksyn::TreeNode> topoNodes_;
   std::vector<DMENode> nodes_;
@@ -326,7 +353,6 @@ inline EmbeddingManager::EmbeddingManager(inparams inp,
   // going to use a random wire for now
   // ideally we may want to pick the one that gives least delay
   wire_ = inp_.wires.back();
-  LogInfo("Using wire type=" + wire_.type);
 
   adj_.resize(res.Nodes.size() + 1);
   for (const auto &edge : res.Edges) {
@@ -341,6 +367,7 @@ inline EmbeddingManager::EmbeddingManager(inparams inp,
 
   nodes_.resize(res.Nodes.size() + 1);
 
+  // @FIXME: remove this printout
   for (size_t i = 0; i < adj_.size(); ++i) {
     std::cout << i << " " << adj_[i].size() << ": ";
     for (auto j : adj_[i]) {
@@ -381,17 +408,39 @@ inline void EmbeddingManager::dfs(int32_t nodeIdx, int32_t parentIdx) {
   }
 }
 
-inline void EmbeddingManager::computeEmbedding() {
+inline void EmbeddingManager::finalise(int32_t nodeIdx, int32_t parentIdx) {
+  const auto &node = nodes_[nodeIdx];
+  pt_t tap;
+  if (node.Core.Kind == DMECore::POINT) {
+    tap = std::get<pt_t>(node.Core.Loc);
+  } else if (node.Core.Kind == DMECore::SEGMENT) {
+    tap = closestOnSegment(
+        {latestRes_.Nodes[parentIdx].x, latestRes_.Nodes[parentIdx].y},
+        std::get<seg_t>(node.Core.Loc));
+  }
+  latestRes_.Nodes[nodeIdx].x = tap.x;
+  latestRes_.Nodes[nodeIdx].y = tap.y;
+  for (auto idx : adj_[nodeIdx]) {
+    if (idx == parentIdx) {
+      continue;
+    }
+    finalise(idx, nodeIdx);
+  }
+}
+
+inline EmbeddingResult EmbeddingManager::computeEmbedding() {
   // 0 is SRC
   auto root = adj_[0].back();
-  std::cout << root << std::endl;
   dfs(root, 0);
 
-  // @TODO: return stuff in proper format
+  latestRes_ = topology_;
+  finalise(root, 0);
+
+  // @FIXME: remove this printout
   for (size_t i = 1; i < nodes_.size(); ++i) {
-    std::cout << i << " ";
     std::cout << nodes_[i].str() << std::endl;
   }
+  return latestRes_;
 }
 
 } // namespace dme

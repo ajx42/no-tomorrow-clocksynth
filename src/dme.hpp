@@ -40,7 +40,9 @@ using pt_t = ManhattanPt;
 
 struct ManhattanSeg : std::pair<ManhattanPt, ManhattanPt> {
   ManhattanSeg(ManhattanPt a, ManhattanPt b)
-      : std::pair<ManhattanPt, ManhattanPt>(a, b) {}
+      : std::pair<ManhattanPt, ManhattanPt>(a, b) {
+    if ( second.x < first.x ) std::swap(first, second);    
+  }
 
   int64_t getSlope() const {
     auto dx = second.x - first.x;
@@ -74,7 +76,7 @@ inline int64_t manhattanDistance(pt_t a, seg_t b) {
   }
   auto slopePt = pt_t{.x = 1, .y = dy / dx};
 
-  // brute forcing for now
+  // @FIXME: brute forcing for now
   // really bored of this and moving on
   auto ans = std::numeric_limits<int64_t>::max();
   for (pt_t x = b.first; x != b.second; x = x + slopePt) {
@@ -91,6 +93,21 @@ inline int64_t manhattanDistance(seg_t a, seg_t b) {
   ans = std::min(ans, manhattanDistance(b.first, a));
   ans = std::min(ans, manhattanDistance(b.second, a));
   return ans;
+}
+
+// @FIXME: brute forcing here as well
+inline pt_t closestOnSegment(pt_t src, seg_t target) {
+  auto slopePt = pt_t {.x = 1, .y = target.getSlope()};
+  auto mnDist = std::numeric_limits<int64_t>::max();
+  pt_t retAns;
+  for ( pt_t x = target.first; x != target.second; x = x + slopePt ) {
+    auto dist = manhattanDistance(src, x);
+    if ( dist < mnDist ) {
+      mnDist = dist;
+      retAns = x;
+    }
+  }
+  return retAns;
 }
 
 struct DMECore {

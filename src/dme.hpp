@@ -41,7 +41,8 @@ using pt_t = ManhattanPt;
 struct ManhattanSeg : std::pair<ManhattanPt, ManhattanPt> {
   ManhattanSeg(ManhattanPt a, ManhattanPt b)
       : std::pair<ManhattanPt, ManhattanPt>(a, b) {
-    if ( second.x < first.x ) std::swap(first, second);    
+    if (second.x < first.x)
+      std::swap(first, second);
   }
 
   double getSlope() const {
@@ -57,7 +58,8 @@ struct ManhattanSeg : std::pair<ManhattanPt, ManhattanPt> {
 
   std::string str() const {
     std::ostringstream oss;
-    oss << "Segment:(Slope=" << getSlope() << "):[" << first.str() << ", " << second.str() << "]";
+    oss << "Segment:(Slope=" << getSlope() << "):[" << first.str() << ", "
+        << second.str() << "]";
     return oss.str();
   }
 };
@@ -98,16 +100,16 @@ inline int64_t manhattanDistance(seg_t a, seg_t b) {
 // @FIXME: brute forcing here as well
 inline pt_t closestOnSegment(pt_t src, seg_t target) {
   auto slope = target.getSlope();
-  if ( slope != 1 && slope != -1 ) {
+  if (slope != 1 && slope != -1) {
     LogError("closestOnSegment function is only available for Manhattan Arcs");
     return target.first;
   }
-  auto slopePt = pt_t {.x = 1, .y = static_cast<int64_t>(slope)};
+  auto slopePt = pt_t{.x = 1, .y = static_cast<int64_t>(slope)};
   auto mnDist = std::numeric_limits<int64_t>::max();
   pt_t retAns;
-  for ( pt_t x = target.first; x <= target.second; x = x + slopePt ) {
+  for (pt_t x = target.first; x <= target.second; x = x + slopePt) {
     auto dist = manhattanDistance(src, x);
-    if ( dist < mnDist ) {
+    if (dist < mnDist) {
       mnDist = dist;
       retAns = x;
     }
@@ -288,7 +290,7 @@ inline std::string DMENode::str() const {
 
 inline DMENode merge(const DMENode &lhs, const DMENode &rhs, wire wr) {
   auto d = coreDistance(lhs.Core, rhs.Core);
-  LogInfo("Merging: " + lhs.str() + " " + rhs.str()); 
+  LogInfo("Merging: " + lhs.str() + " " + rhs.str());
   if (d == 0) {
     LogError("Intersecting cores. This won't end well!");
   }
@@ -298,7 +300,7 @@ inline DMENode merge(const DMENode &lhs, const DMENode &rhs, wire wr) {
   double eaDbl =
       (double)((del2 - del1) + (double)(d * d * wr.resistance * wr.cap) / 2 +
                d * wr.resistance * c2) /
-      (wr.resistance * ((double)c1 + c2 + d*wr.cap));
+      (wr.resistance * ((double)c1 + c2 + d * wr.cap));
 
   eaDbl = std::max(eaDbl, 0.);
   eaDbl = std::min(eaDbl, (double)d);
@@ -319,7 +321,7 @@ inline DMENode merge(const DMENode &lhs, const DMENode &rhs, wire wr) {
   auto delay1 = del1 + ea * wr.resistance * ((double)ea * wr.cap / 2 + c1);
   auto delay2 = del2 + eb * wr.resistance * ((double)eb * wr.cap / 2 + c2);
 
-  return  DMENode{.Core = intersection.value(),
+  return DMENode{.Core = intersection.value(),
                  .Delay = std::max(delay1, delay2),
                  .LdCap = lhs.LdCap + rhs.LdCap + d * wr.cap};
 }
@@ -407,19 +409,19 @@ inline void EmbeddingManager::dfs(int32_t nodeIdx, int32_t parentIdx) {
 }
 
 inline void EmbeddingManager::finalise(int32_t nodeIdx, int32_t parentIdx) {
-  const auto& node = nodes_[nodeIdx];
+  const auto &node = nodes_[nodeIdx];
   pt_t tap;
-  if ( node.Core.Kind == DMECore::POINT ) {
-    tap = std::get<pt_t>( node.Core.Loc );
-  } else if ( node.Core.Kind == DMECore::SEGMENT ) {
+  if (node.Core.Kind == DMECore::POINT) {
+    tap = std::get<pt_t>(node.Core.Loc);
+  } else if (node.Core.Kind == DMECore::SEGMENT) {
     tap = closestOnSegment(
-        {latestRes_.Nodes[parentIdx].x, latestRes_.Nodes[parentIdx].y}, std::get<seg_t>(node.Core.Loc) );
-
+        {latestRes_.Nodes[parentIdx].x, latestRes_.Nodes[parentIdx].y},
+        std::get<seg_t>(node.Core.Loc));
   }
   latestRes_.Nodes[nodeIdx].x = tap.x;
   latestRes_.Nodes[nodeIdx].y = tap.y;
-  for ( auto idx: adj_[nodeIdx] ) {
-    if ( idx == parentIdx ) {
+  for (auto idx : adj_[nodeIdx]) {
+    if (idx == parentIdx) {
       continue;
     }
     finalise(idx, nodeIdx);
@@ -431,7 +433,6 @@ inline EmbeddingResult EmbeddingManager::computeEmbedding() {
   auto root = adj_[0].back();
   dfs(root, 0);
 
-  
   latestRes_ = topology_;
   finalise(root, 0);
 

@@ -1,8 +1,8 @@
 #include "parser.hpp"
 #include "topology.hpp"
 
-#include <iostream>
 #include <algorithm>
+#include <iostream>
 #include <map>
 #include <optional>
 #include <variant>
@@ -415,11 +415,10 @@ inline void EmbeddingManager::finalise(int32_t nodeIdx, int32_t parentIdx) {
   if (node.Core.Kind == DMECore::POINT) {
     tap = std::get<pt_t>(node.Core.Loc);
   } else if (node.Core.Kind == DMECore::SEGMENT) {
-    tap = closestOnSegment(
-        {topoNodes_[parentIdx].x, topoNodes_[parentIdx].y},
-        std::get<seg_t>(node.Core.Loc));
+    tap = closestOnSegment({topoNodes_[parentIdx].x, topoNodes_[parentIdx].y},
+                           std::get<seg_t>(node.Core.Loc));
   }
-  
+
   topoNodes_[nodeIdx].x = tap.x;
   topoNodes_[nodeIdx].y = tap.y;
   for (auto idx : adj_[nodeIdx]) {
@@ -437,7 +436,7 @@ inline EmbeddingResult EmbeddingManager::computeEmbedding() {
   finalise(root, 0);
 
   // @FIXME: finalise leaves the object in unusable state
-  for ( auto& node: topology_.Nodes ) {
+  for (auto &node : topology_.Nodes) {
     node.x = topoNodes_[node.Idx].x;
     node.y = topoNodes_[node.Idx].y;
   }

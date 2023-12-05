@@ -33,7 +33,7 @@ struct TreeNode {
   enum { SINK, INTERNAL, SOURCE } Kind;
   int32_t Idx;
   int64_t x, y;
-  int64_t LdCap;
+  double LdCap;
 
   auto operator<=>(const TreeNode &) const = default;
 };
@@ -128,7 +128,7 @@ private:
   BlockageManager bMgr_;
 };
 
-TreeSynthesis::TreeSynthesis(inparams inp, TreeSynthesisSettings sett)
+inline TreeSynthesis::TreeSynthesis(inparams inp, TreeSynthesisSettings sett)
     : inp_(inp), sett_(sett) {
   std::for_each(inp_.sinks.begin(), inp_.sinks.end(), [&](auto &&sink) {
     sinks_.push_back(TreeNode{
@@ -136,7 +136,7 @@ TreeSynthesis::TreeSynthesis(inparams inp, TreeSynthesisSettings sett)
         .Idx = static_cast<int32_t>(sinks_.size() + 1),
         .x = sink.cord.x,
         .y = sink.cord.y,
-        .LdCap = sink.cap,
+        .LdCap = static_cast<double>(sink.cap),
     });
     idxToTag_[sinks_.back().Idx] = sink.id;
   });

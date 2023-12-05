@@ -1,4 +1,6 @@
+#include "parser.hpp"
 #include "topology.hpp"
+
 #include <algorithm>
 #include <map>
 #include <optional>
@@ -48,6 +50,8 @@ struct ManhattanSeg : std::pair<ManhattanPt, ManhattanPt> {
     }
     return dy / dx;
   }
+
+  bool isActuallyPoint() const { return first == second; }
 
   std::string str() const {
     std::ostringstream oss;
@@ -153,20 +157,55 @@ inline DMETiledRegion::DMETiledRegion(DMECore core, int64_t dist)
 inline std::optional<DMECore> getTRRIntersection(DMETiledRegion regA,
                                                  DMETiledRegion regB) {
   auto segmentIntersection = [](seg_t l, seg_t r) -> std::optional<seg_t> {
+    if (l.isActuallyPoint() && r.isActuallyPoint()) {
+      if (l.first == r.first) {
+        return {{l.first, l.first}};
+      }
+      return {};
+    }
+
+    if (r.isActuallyPoint()) {
+      std::swap(l, r);
+    }
+
+    if (l.isActuallyPoint()) {
+      auto [l1, _] = l;
+      auto [r1, r2] = r;
+      if (l1 == r1 || l1 == r2) {
+        return {{l1, l1}};
+      }
+      if (seg_t(l1, r1).getSlope() == seg_t(l1, r2).getSlope()) {
+        if (r1.x > r2.x)
+          std::swap(r1, r2);
+        if (l1.x >= r1.x && l1.x <= r2.x) {
+          return {{l1, l1}};
+        }
+      }
+      return {};
+    }
+
     if (l.getSlope() != r.getSlope()) {
       return {};
     }
     auto [l1, l2] = l;
     auto [r1, r2] = r;
     auto refSlope = l.getSlope();
-    if (seg_t(l1, r1).getSlope() == refSlope &&
-        seg_t(l1, r2).getSlope() == refSlope) {
+    auto checkSlopeCondition = [](auto &&l, auto &&r, auto &&slope) {
+      return l == r || seg_t(l, r).getSlope() == slope;
+    };
+
+    if (checkSlopeCondition(l1, r1, refSlope) &&
+        checkSlopeCondition(l1, r2, refSlope)) {
       if (r1.x > r2.x)
         std::swap(r1, r2);
       if (l1.x > l2.x)
         std::swap(l1, l2);
       auto p1 = l1.x > r1.x ? l1 : r1;
       auto p2 = l2.x > r2.x ? r2 : l2;
+      // no intersection
+      if (r2.x < l1.x || r1.x > l2.x) {
+        return {};
+      }
       return {{p1, p2}};
     }
     return {};
@@ -188,8 +227,6 @@ inline std::optional<DMECore> getTRRIntersection(DMETiledRegion regA,
 
   for (auto segA : regASegs) {
     for (auto segB : regBSegs) {
-      // @FIXME : remove
-      //      std::cout << segA.str() << " " << segB.str() << std::endl;
       auto res = segmentIntersection(segA, segB);
       if (!res.has_value()) {
         continue;
@@ -213,8 +250,148 @@ inline std::optional<DMECore> getTRRIntersection(DMETiledRegion regA,
 
 struct DMENode {
   DMECore Core;
-  int64_t LdCap = 0;
+  double LdCap = 0;
   double Delay = 0;
+
+  std::string str() const;
 };
+
+inline std::string DMENode::str() const {
+  std::ostringstream oss;
+  oss << "DMENode=[" << Core.str() << ", "
+      << "LdCap=" << LdCap << ", "
+      << "Delay=" << Delay << "]";
+  return oss.str();
+}
+
+inline DMENode merge(const DMENode &lhs, const DMENode &rhs, wire wr) {
+  auto d = coreDistance(lhs.Core, rhs.Core);
+  if (d == 0) {
+    LogError("Intersecting cores. This won't end well!");
+  }
+
+  auto del1 = lhs.Delay, del2 = rhs.Delay, c1 = lhs.LdCap, c2 = rhs.LdCap;
+
+  double eaDbl =
+      (double)((del2 - del1) + (double)(d * d * wr.resistance * wr.cap) / 2 +
+               d * wr.resistance * c2) /
+      (wr.resistance * (c1 + c2 + d));
+
+  eaDbl = std::max(eaDbl, 0.);
+  eaDbl = std::min(eaDbl, (double)d);
+
+  int64_t ea = static_cast<int64_t>(eaDbl);
+  auto eb = d - ea;
+
+  auto trrLhs = DMETiledRegion(lhs.Core, ea);
+  auto trrRhs = DMETiledRegion(rhs.Core, eb);
+
+  auto intersection = getTRRIntersection(trrLhs, trrRhs);
+  if (!intersection.has_value()) {
+    LogError("No TRR intersection. Something is wrong!");
+    // can't recover
+    std::terminate();
+  }
+
+  auto delay1 = del1 + ea * wr.resistance * ((double)ea * wr.cap / 2 + c1);
+  auto delay2 = del2 + eb * wr.resistance * ((double)eb * wr.cap / 2 + c2);
+
+  return DMENode{.Core = intersection.value(),
+                 .Delay = std::max(delay1, delay2),
+                 .LdCap = lhs.LdCap + rhs.LdCap + d * wr.cap};
+}
+
+struct EmbeddingResult {};
+
+struct EmbeddingManager {
+  EmbeddingManager(inparams, clksyn::TopologyResult);
+
+  void computeEmbedding();
+
+private:
+  void dfs(int32_t nodeIdx, int32_t parentIdx);
+
+  inparams inp_;
+  wire wire_;
+  clksyn::TopologyResult topology_;
+  std::vector<std::vector<int32_t>> adj_;
+  std::vector<clksyn::TreeNode> topoNodes_;
+  std::vector<DMENode> nodes_;
+};
+
+inline EmbeddingManager::EmbeddingManager(inparams inp,
+                                          clksyn::TopologyResult res)
+    : inp_(inp), topology_(res) {
+  // @TODO
+  // going to use a random wire for now
+  // ideally we may want to pick the one that gives least delay
+  wire_ = inp_.wires.back();
+  LogInfo("Using wire type=" + wire_.type);
+
+  adj_.resize(res.Nodes.size() + 1);
+  for (const auto &edge : res.Edges) {
+    adj_[edge.first].push_back(edge.second);
+    adj_[edge.second].push_back(edge.first);
+  }
+
+  topoNodes_.resize(res.Nodes.size() + 1);
+  for (const auto &node : res.Nodes) {
+    topoNodes_[node.Idx] = node;
+  }
+
+  nodes_.resize(res.Nodes.size() + 1);
+
+  for (size_t i = 0; i < adj_.size(); ++i) {
+    std::cout << i << " " << adj_[i].size() << ": ";
+    for (auto j : adj_[i]) {
+      std::cout << j << ' ';
+    }
+    std::cout << std::endl;
+  }
+}
+
+inline void EmbeddingManager::dfs(int32_t nodeIdx, int32_t parentIdx) {
+  int32_t kidOne = -1, kidTwo = -1;
+
+  for (const auto &idx : adj_[nodeIdx]) {
+    if (idx == parentIdx) {
+      continue;
+    }
+    kidTwo = kidOne;
+    kidOne = idx;
+    dfs(idx, nodeIdx);
+  }
+
+  if (kidOne == -1 && kidTwo != -1) {
+    // single child
+    LogError("Unexpected single child in binary tree.");
+  }
+
+  auto &topoNode = topoNodes_[nodeIdx];
+  if (kidOne == -1) {
+    // no kids, leaf node
+    nodes_[nodeIdx] = DMENode{
+        .Core = DMECore{.Kind = DMECore::POINT,
+                        .Loc = pt_t{.x = topoNode.x, .y = topoNode.y}},
+        .Delay = 0,
+        .LdCap = topoNode.LdCap,
+    };
+  } else {
+    nodes_[nodeIdx] = merge(nodes_[kidOne], nodes_[kidTwo], wire_);
+  }
+}
+
+inline void EmbeddingManager::computeEmbedding() {
+  // 0 is SRC
+  auto root = adj_[0].back();
+  std::cout << root << std::endl;
+  dfs(root, 0);
+
+  // @TODO: return stuff in proper format
+  for (size_t i = 1; i < nodes_.size(); ++i) {
+    std::cout << i << " ";
+    std::cout << nodes_[i].str() << std::endl;
+  }
+}
 
 } // namespace dme

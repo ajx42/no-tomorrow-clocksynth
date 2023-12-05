@@ -2,6 +2,7 @@
 #include "topology.hpp"
 
 #include <algorithm>
+#include <iostream>
 #include <map>
 #include <optional>
 #include <variant>
@@ -340,7 +341,6 @@ private:
   inparams inp_;
   wire wire_;
   clksyn::TopologyResult topology_;
-  EmbeddingResult latestRes_;
   std::vector<std::vector<int32_t>> adj_;
   std::vector<clksyn::TreeNode> topoNodes_;
   std::vector<DMENode> nodes_;
@@ -394,7 +394,7 @@ inline void EmbeddingManager::dfs(int32_t nodeIdx, int32_t parentIdx) {
     LogError("Unexpected single child in binary tree.");
   }
 
-  auto &topoNode = topoNodes_[nodeIdx];
+  const auto &topoNode = topoNodes_[nodeIdx];
   if (kidOne == -1) {
     // no kids, leaf node
     nodes_[nodeIdx] = DMENode{
@@ -414,12 +414,12 @@ inline void EmbeddingManager::finalise(int32_t nodeIdx, int32_t parentIdx) {
   if (node.Core.Kind == DMECore::POINT) {
     tap = std::get<pt_t>(node.Core.Loc);
   } else if (node.Core.Kind == DMECore::SEGMENT) {
-    tap = closestOnSegment(
-        {latestRes_.Nodes[parentIdx].x, latestRes_.Nodes[parentIdx].y},
-        std::get<seg_t>(node.Core.Loc));
+    tap = closestOnSegment({topoNodes_[parentIdx].x, topoNodes_[parentIdx].y},
+                           std::get<seg_t>(node.Core.Loc));
   }
-  latestRes_.Nodes[nodeIdx].x = tap.x;
-  latestRes_.Nodes[nodeIdx].y = tap.y;
+
+  topoNodes_[nodeIdx].x = tap.x;
+  topoNodes_[nodeIdx].y = tap.y;
   for (auto idx : adj_[nodeIdx]) {
     if (idx == parentIdx) {
       continue;
@@ -432,15 +432,19 @@ inline EmbeddingResult EmbeddingManager::computeEmbedding() {
   // 0 is SRC
   auto root = adj_[0].back();
   dfs(root, 0);
-
-  latestRes_ = topology_;
   finalise(root, 0);
+
+  // @FIXME: finalise leaves the object in unusable state
+  for (auto &node : topology_.Nodes) {
+    node.x = topoNodes_[node.Idx].x;
+    node.y = topoNodes_[node.Idx].y;
+  }
 
   // @FIXME: remove this printout
   for (size_t i = 1; i < nodes_.size(); ++i) {
     std::cout << nodes_[i].str() << std::endl;
   }
-  return latestRes_;
+  return topology_;
 }
 
 } // namespace dme
